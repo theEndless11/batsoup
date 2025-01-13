@@ -1,23 +1,39 @@
-// api/send-message.js
-const connectToDatabase = require('../db'); // Make sure this path is correct
-const Message = require('../models/Message'); // Make sure this path is correct
+const connectToDatabase = require('../db'); // Correct path to db.js
+const Message = require('../models/Message'); // Correct path to Message.js
 
 module.exports = async (req, res) => {
-  await connectToDatabase(); // Ensure you're connecting to the DB
+  try {
+    // Ensure DB connection is established
+    await connectToDatabase();
 
-  if (req.method === 'POST') {
-    const { username, message, mediaUrl } = req.body;
+    // Handle POST request
+    if (req.method === 'POST') {
+      const { username, message, mediaUrl } = req.body;
 
-    try {
+      // Validation
+      if (!username || !message) {
+        return res.status(400).json({ error: 'Username and message are required' });
+      }
+
+      // Create a new message
       const newMessage = new Message({ username, message, mediaUrl });
+
+      // Save message to database
       await newMessage.save();
 
-      res.status(201).json({ message: 'Message sent successfully' });
-    } catch (error) {
-      console.error('Error sending message:', error);
-      res.status(500).json({ error: 'Error sending message', details: error.message });
+      // Respond with success
+      return res.status(201).json({ message: 'Message sent successfully', data: newMessage });
+    } else {
+      // Handle unsupported methods (only POST is allowed)
+      return res.status(405).json({ error: 'Method Not Allowed' });
     }
-  } else {
-    res.status(405).json({ error: 'Method Not Allowed' });
+  } catch (error) {
+    console.error('Error sending message:', error);
+
+    // Handle unexpected errors
+    return res.status(500).json({
+      error: 'Error sending message',
+      details: error.message,
+    });
   }
 };
